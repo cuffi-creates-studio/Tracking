@@ -1,4 +1,5 @@
-# Mban projektin falas të Supabase aktiv (pushohet pas 7 ditësh pa aktivitet).
+# Mban të dy projektet falas të Supabase aktivë (pushohen pas 7 ditësh pa aktivitet):
+#   1) Cuffi Studio (SUPABASE_URL)  2) Cuffi Creates Studio (SUPABASE2_URL)
 # Lexon tabelën "keepalive" çdo dy ditë. Nuk prek të dhënat e studios.
 name: Supabase keepalive
 
@@ -29,4 +30,21 @@ jobs:
             -H "apikey: $SUPABASE_ANON_KEY" \
             -H "Authorization: Bearer $SUPABASE_ANON_KEY")
           echo "HTTP $code"; cat /tmp/out.json; echo
+          test "$code" = "200"
+
+      - name: Lexo tabelën keepalive (Cuffi Creates Studio)
+        if: always()   # niset edhe nëse projekti i parë dështon
+        env:
+          SUPABASE2_URL: ${{ secrets.SUPABASE2_URL }}
+          SUPABASE2_ANON_KEY: ${{ secrets.SUPABASE2_ANON_KEY }}
+        run: |
+          if [ -z "$SUPABASE2_URL" ] || [ -z "$SUPABASE2_ANON_KEY" ]; then
+            echo "Mungojnë sekretet SUPABASE2_URL / SUPABASE2_ANON_KEY (Settings → Secrets → Actions)."
+            exit 1
+          fi
+          # cuffi_sync nuk lexohet nga anon (dhe s'ka kolonë id), prandaj lexohet tabela keepalive.
+          code=$(curl -s -o /tmp/out2.json -w "%{http_code}" \
+            "$SUPABASE2_URL/rest/v1/keepalive?select=id&limit=1" \
+            -H "apikey: $SUPABASE2_ANON_KEY")
+          echo "HTTP $code"; cat /tmp/out2.json; echo
           test "$code" = "200"
