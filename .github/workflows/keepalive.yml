@@ -1,0 +1,32 @@
+# Mban projektin falas të Supabase aktiv (pushohet pas 7 ditësh pa aktivitet).
+# Lexon tabelën "keepalive" çdo dy ditë. Nuk prek të dhënat e studios.
+name: Supabase keepalive
+
+on:
+  schedule:
+    - cron: "17 6 */2 * *"   # çdo 2 ditë, ora 06:17 UTC
+  workflow_dispatch: {}      # mund ta nisësh edhe me dorë nga faqja "Actions"
+
+permissions:
+  contents: read
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Lexo tabelën keepalive
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
+        run: |
+          if [ -z "$SUPABASE_URL" ] || [ -z "$SUPABASE_ANON_KEY" ]; then
+            echo "Mungojnë sekretet SUPABASE_URL / SUPABASE_ANON_KEY (Settings → Secrets → Actions)."
+            exit 1
+          fi
+          code=$(curl -s -o /tmp/out.json -w "%{http_code}" \
+            "$SUPABASE_URL/rest/v1/keepalive?select=id&limit=1" \
+            -H "apikey: $SUPABASE_ANON_KEY" \
+            -H "Authorization: Bearer $SUPABASE_ANON_KEY")
+          echo "HTTP $code"; cat /tmp/out.json; echo
+          test "$code" = "200"
